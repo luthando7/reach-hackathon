@@ -9,7 +9,7 @@ import { loadStdlib } from '@reach-sh/stdlib';
 const reach = loadStdlib(process.env);
 
 const handToInt = {'ROCK': 0, 'PAPER': 1, 'SCISSORS': 2};
-const intToOutcome = ['Bob wins!', 'Draw!', 'Alice wins!'];
+const intToOutcome = ['Unsuccessful!', 'Claim is still being processed!', 'Successful!'];
 const {standardUnit} = reach;
 const defaults = {defaultFundAmt: '10', defaultWager: '3', standardUnit};
 

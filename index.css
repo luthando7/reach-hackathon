@@ -16,39 +16,91 @@ body {
   }
   
   .App-header {
-    background-color: #282c34;
-    min-height: 100vh;
+    background-color: #021439;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     font-size: calc(10px + 2vmin);
     color: white;
+    padding: 0 1rem;
+  }
+
+  .App-header a {
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: .25rem;
+  }
+
+  .App-header li.active {
+    color: #61dafb;
+  }
+
+  .App-header li.active:hover {
+    color: #1c4d5a;
+  }
+
+  .App-header ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    display: flex;
+    gap: 1rem;
   }
   
   .App-link {
     color: #61dafb;
   }
+
+  .column {
+    float: left;
+    width: 50%;
+  }
+
+  .column h1 {
+    color: #021439;
+  }
   
   input[type=number] {
     font-size: calc(10px + 2vmin);
-    width: 4em;
+    width: 8rem;
+    border-radius: .5rem;
+    border: #021439 3px solid;
+    margin: 4px;
   }
   
   button {
     font-size: calc(10px + 2vmin);
+    border-radius: .5rem;
+    border: #021439 3px solid;
+    color: #fff;
+    background-color: #021439;
+    margin: 2px;
+  }
+
+  .vertical-center {
+    margin: auto;
+    padding-top: 150px;
   }
   
   textarea {
     font-size: calc(10px + 2vmin);
   }
+
+  .blue {
+    background-color: #021439;
+    height: 100vh;
+    color: #fff;
+  }
   
   .ContractInfo {
     font-size: calc(10px + 1vmin);
-    text-align: left;
-    width: 90vw;
+    text-align: center;
+    /* width: 90vw;
     height: 7em;
-    padding: 2vw;
+    padding: 2vw; */
     overflow-x: scroll;
     white-space: pre;
   }
