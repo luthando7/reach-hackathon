@@ -1,97 +1,129 @@
 "reach 0.1";
 
-/**
- * Alice here is the client and bob is the insurer, Alice should submit a claim to bob and bob should
- * either grant that claim or deny it.
- */
+export const main = Reach.App(
+  {},
+  [ Participant("Subscriber", {
+    request: Fun([UInt], UInt),
+    getUserRequest: Fun(
+      [UInt],
+      Object({ isRequested: Bool, requestedPayment: UInt })
+    ),
+    getSubscriberBalanceAfterPayment: Fun([], UInt),
+    showValue: Fun([UInt], Null),
+    showPaymentCount: Fun([UInt], Null),
+    getPayment: Fun([], UInt),
+    getSubscriberBalanceBeforePayment: Fun([], UInt),
+    getSubscriberLastBalance: Fun([], UInt),
+  }), 
+  Participant("InsuranceCompany", {
+    getBalance: Fun([], UInt),
+    approve: Fun([UInt, UInt], Bool),
+    showValue: Fun([UInt], Null),
+    getCompanyBalance: Fun([], UInt),
+    approveRequest: Fun([UInt, Bool, UInt], Bool),
+  })],
 
-const [isHand, ROCK, PAPER, SCISSORS] = makeEnum(3);
-const [isOutcome, B_WINS, DRAW, A_WINS] = makeEnum(3);
-
-const winner = (handAlice, handBob) => (handAlice + (4 - handBob)) % 3;
-
-
-const Player = {
-  ...hasRandom,
-  getHand: Fun([], UInt),
-  seeOutcome: Fun([UInt], Null),
-  informTimeout: Fun([], Null),
-};
-
-export const main = Reach.App(() => {
-  const Alice = Participant("Alice", {
-    ...Player,
-    wager: UInt, // atomic units of currency
-    deadline: UInt, // time delta (blocks/rounds)
-  });
-  const Bob = Participant("Bob", {
-    ...Player,
-    acceptWager: Fun([UInt], Null),
-  });
-  init();
-
-  const informTimeout = () => {
-    each([Alice, Bob], () => {
-      interact.informTimeout();
-    });
-  };
-
-  Alice.only(() => {
-    const wager = declassify(interact.wager);
-    const deadline = declassify(interact.deadline);
-  });
-  Alice.publish(wager, deadline).pay(wager);
-  commit();
-
-  Bob.only(() => {
-    interact.acceptWager(wager);
-  });
-  Bob.pay(wager).timeout(relativeTime(deadline), () =>
-    closeTo(Alice, informTimeout)
-  );
-
-  var outcome = DRAW;
-  invariant(balance() == 2 * wager && isOutcome(outcome));
-  while (outcome == DRAW) {
+  (Subscriber, InsuranceCompany) => {
+    Subscriber.publish();
     commit();
 
-    Alice.only(() => {
-      const _handAlice = interact.getHand();
-      const [_commitAlice, _saltAlice] = makeCommitment(interact, _handAlice);
-      const commitAlice = declassify(_commitAlice);
+    const canf = 2;
+
+    InsuranceCompany.only(() => {
+      const getBalance = declassify(interact.getBalance());
+      assume(getBalance > 0);
     });
-    Alice.publish(commitAlice).timeout(relativeTime(deadline), () =>
-      closeTo(Bob, informTimeout)
-    );
+    InsuranceCompany.publish(getBalance);
     commit();
 
-    unknowable(Bob, Alice(_handAlice, _saltAlice));
-    Bob.only(() => {
-      const handBob = declassify(interact.getHand());
+    Subscriber.only(() => {
+      const howMuch = declassify(interact.getPayment());
+      assume(howMuch > 0);
+      assume(getBalance > howMuch);
     });
-    Bob.publish(handBob).timeout(relativeTime(deadline), () =>
-      closeTo(Alice, informTimeout)
-    );
+    Subscriber.publish(howMuch);
+    commit();
+    Subscriber.publish();
+
+    var [bal, usgVal, paymentCount] = [0, 0, 0];
+    invariant(bal == 0);
+    while (usgVal == 0) {
+      commit();
+
+      Subscriber.only(() => {
+        interact.showPaymentCount(paymentCount + 1);
+      });
+
+      Subscriber.only(() => {
+        const tempBalanceofSubscriber0 = declassify(
+          interact.getSubscriberBalanceBeforePayment()
+        );
+      });
+
+      Subscriber.publish(tempBalanceofSubscriber0);
+
+      commit();
+
+      wait(canf);
+
+      Subscriber.pay(howMuch);
+      commit();
+
+      Subscriber.only(() => {
+        const { isRequested, requestedPayment } = declassify(
+          interact.getUserRequest(balance())
+        );
+        assume(requestedPayment <= balance());
+      });
+      Subscriber.publish(isRequested, requestedPayment);
+      require(requestedPayment <= balance());
+      commit();
+
+      InsuranceCompany.only(() => {
+        const result = declassify(
+          interact.approveRequest(balance(), isRequested, requestedPayment)
+        );
+      });
+      InsuranceCompany.publish(result);
+
+      commit();
+      Subscriber.only(() => {
+        const tempBalanceofSubscriber = declassify(
+          interact.getSubscriberBalanceAfterPayment()
+        );
+      });
+
+      Subscriber.publish(tempBalanceofSubscriber);
+
+      if (tempBalanceofSubscriber >= getBalance) {
+        if (result) {
+          transfer(requestedPayment).to(Subscriber);
+        }
+        [bal, usgVal, paymentCount] = [bal, 0, paymentCount + 1];
+        continue;
+      } else {
+        [bal, usgVal, paymentCount] = [bal, 1, paymentCount];
+        continue;
+      }
+    }
+
+    commit();
+    Subscriber.only(() => {
+      const tempBalanceofSubscriberX = declassify(
+        interact.getSubscriberLastBalance()
+      );
+    });
+    Subscriber.publish(tempBalanceofSubscriberX);
+    transfer(balance()).to(InsuranceCompany);
     commit();
 
-    Alice.only(() => {
-      const saltAlice = declassify(_saltAlice);
-      const handAlice = declassify(_handAlice);
+    InsuranceCompany.only(() => {
+      const tempBalanceofInsuranceCompanyY = declassify(
+        interact.getCompanyBalance()
+      );
     });
-    Alice.publish(saltAlice, handAlice).timeout(relativeTime(deadline), () =>
-      closeTo(Bob, informTimeout)
-    );
-    checkCommitment(commitAlice, saltAlice, handAlice);
+    InsuranceCompany.publish(tempBalanceofInsuranceCompanyY);
 
-    outcome = winner(handAlice, handBob);
-    continue;
+    commit();
   }
-
-  assert(outcome == A_WINS || outcome == B_WINS);
-  transfer(2 * wager).to(outcome == A_WINS ? Alice : Bob);
-  commit();
-
-  each([Alice, Bob], () => {
-    interact.seeOutcome(outcome);
-  });
-});
+);
